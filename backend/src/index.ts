@@ -11,7 +11,9 @@ app.get("/",(req,res)=>{
     res.send("API is running");
 })
 import auther from "./routes/auth";
+import router from "./routes/drive";
 app.use("/auth" , auther);
+app.use("/drive" , router);
 
 const PORT = process.env.PORT || 4000;
 app.listen(PORT , ()=>{

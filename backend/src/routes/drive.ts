@@ -4,7 +4,7 @@ import { google } from "googleapis";
 
 const router = Router();
 
-router.get("/drive/scan", async (req, res) => {
+router.get("/scan", async (req, res) => {
     try {
         const email = req.query.email as string;
         if (!email) {
