@@ -1,6 +1,9 @@
 import { Router } from "express";
 import { prismaDB } from "../lib/prisma";
 import { google } from "googleapis";
+import { file } from "googleapis/build/src/apis/file";
+import { error } from "console";
+import { ids } from "googleapis/build/src/apis/ids";
 
 const router = Router();
 
@@ -34,7 +37,7 @@ router.get("/scan", async (req, res) => {
             q: "trashed = false",
         });
         const files = response.data.files ?? [];
-        
+
         const thirtyDaysAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
 
         const oldFiles = files.filter(file => {
@@ -59,11 +62,34 @@ router.get("/scan", async (req, res) => {
             }
         }
         return res.json({
-            message : "Scan completed" , total : oldFiles.length
+            message: "Scan completed", total: oldFiles.length
         });
     } catch (error) {
-        return res.status(500).json({error : "Drive scan Failed"});
+        return res.status(500).json({ error: "Drive scan Failed" });
     }
 })
+
+router.get("/unused", async (req, res) => {
+    const email = req.query.email as string;
+    const user = await prismaDB.user.findUnique({
+        where: {
+            email: email
+        }
+    })
+    if (!user) return res.status(404).json({
+        error: "User not found "
+    });
+    const cutoffDate = new Date();
+    cutoffDate.setFullYear(cutoffDate.getFullYear() - 1);
+    const unusedFiles = await prismaDB.file.findMany({
+        where: {
+            userId: user.id,
+            lastViewedTime:{
+                lt: cutoffDate.toISOString()
+            },
+        },
+    });
+    return res.json({unusedFiles});
+});
 
 export default router;
