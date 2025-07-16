@@ -92,4 +92,44 @@ router.get("/unused", async (req, res) => {
     return res.json({unusedFiles});
 });
 
+router.delete("/delete", async(req,res)=>{
+    try {
+        const {email , fileIds} = req.body;
+        if(!email || !fileIds || !Array.isArray(fileIds)){
+         return res.json({
+            error : "No proper data provided"
+         })
+        }
+        const user = await prismaDB.user.findUnique({
+            where:{email},
+        })
+        const oath2client = new google.auth.OAuth2();
+        oath2client.setCredentials({
+            refresh_token:user?.refreshToken,
+            access_token : user?.accessToken
+        });
+        const drive = google.drive({
+            version:"v2",
+            auth:oath2client
+        })
+        const deletedFiles : string[] = [];
+        const failedFiles : string[] = [];
+        for(const fileId of fileIds){
+            try{
+                await drive.files.delete({fileId});
+                deletedFiles.push(fileId);
+
+                await prismaDB.file.delete({
+                    where : {fileid : fileId}
+                })
+            }catch( error : any){
+                console.error(`Failed to delete ${fileId}:`, error.message);
+            }
+        }
+
+    } catch (error) {
+        
+    }
+})
+
 export default router;
