@@ -4,7 +4,7 @@ import { prismaDB } from "../lib/prisma";
 
 const auther = Router();
 
-const oath2client = new google.auth.OAuth2({
+export const oath2client = new google.auth.OAuth2({
     client_id: process.env.google_client_id,
     client_secret: process.env.google_client_secret,
     redirectUri: process.env.GOOGLE_REDIRECT_URI

@@ -1,9 +1,7 @@
 import { Router } from "express";
 import { prismaDB } from "../lib/prisma";
 import { google } from "googleapis";
-import { file } from "googleapis/build/src/apis/file";
-import { error } from "console";
-import { ids } from "googleapis/build/src/apis/ids";
+import { oath2client } from "./auth";
 
 const router = Router();
 
@@ -25,12 +23,12 @@ router.get("/scan", async (req, res) => {
             return res.status(404).json({
                 error: "User Not Found"
             })
-        const oAuth2Client = new google.auth.OAuth2();
-        oAuth2Client.setCredentials({
+       
+        oath2client.setCredentials({
             access_token: user.accessToken,
             refresh_token: user.refreshToken
         });
-        const drive = google.drive({ version: "v3", auth: oAuth2Client });
+        const drive = google.drive({ version: "v3", auth: oath2client });
         const response = await drive.files.list({
             pageSize: 100,
             fields: "files(id, name, mimeType, modifiedTime, viewedByMeTime, size)",
@@ -65,6 +63,7 @@ router.get("/scan", async (req, res) => {
             message: "Scan completed", total: oldFiles.length
         });
     } catch (error) {
+        console.error(error);
         return res.status(500).json({ error: "Drive scan Failed" });
     }
 })
@@ -84,51 +83,56 @@ router.get("/unused", async (req, res) => {
     const unusedFiles = await prismaDB.file.findMany({
         where: {
             userId: user.id,
-            lastViewedTime:{
+            lastViewedTime: {
                 lt: cutoffDate.toISOString()
             },
         },
     });
-    return res.json({unusedFiles});
+    return res.json({ unusedFiles });
 });
 
-router.delete("/delete", async(req,res)=>{
+router.delete("/delete", async (req, res) => {
     try {
-        const {email , fileIds} = req.body;
-        if(!email || !fileIds || !Array.isArray(fileIds)){
-         return res.json({
-            error : "No proper data provided"
-         })
+        const { email, fileIds } = req.body;
+        if (!email || !fileIds || !Array.isArray(fileIds)) {
+            return res.json({
+                error: "No proper data provided"
+            })
         }
         const user = await prismaDB.user.findUnique({
-            where:{email},
+            where: { email },
         })
-        const oath2client = new google.auth.OAuth2();
+        // const oath2client = new google.auth.OAuth2();
         oath2client.setCredentials({
-            refresh_token:user?.refreshToken,
-            access_token : user?.accessToken
+            refresh_token: user?.refreshToken,
+            access_token: user?.accessToken
         });
         const drive = google.drive({
-            version:"v2",
-            auth:oath2client
+            version: "v2",
+            auth: oath2client
         })
-        const deletedFiles : string[] = [];
-        const failedFiles : string[] = [];
-        for(const fileId of fileIds){
-            try{
-                await drive.files.delete({fileId});
+        const deletedFiles: string[] = [];
+        const failedFiles: string[] = [];
+        for (const fileId of fileIds) {
+            try {
+                await drive.files.delete({ fileId });
                 deletedFiles.push(fileId);
 
                 await prismaDB.file.delete({
-                    where : {fileid : fileId}
+                    where: { fileid: fileId }
                 })
-            }catch( error : any){
+            } catch (error: any) {
                 console.error(`Failed to delete ${fileId}:`, error.message);
+                failedFiles.push(fileId);
             }
         }
+        return res.json({ success: true, deletedFiles, failedFiles });
 
     } catch (error) {
-        
+        // console.error(error);
+        return res.status(500).json({
+            error: error
+        })
     }
 })
 
