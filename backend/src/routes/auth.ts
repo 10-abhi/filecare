@@ -37,11 +37,11 @@ auther.get("/google/callback", async (req, res) => {
             auth: oath2client, version: "v2"
         });
         const { data: userinfo } = await oauth2.userinfo.get();
-    if(!userinfo.id || !tokens.access_token  || !tokens.refresh_token){
-          return res.status(400).json({
-            error : "Missing Google User ID || access token || refresh token"
-          })
-       }
+        if (!userinfo.email|| !userinfo.name || !userinfo.id || !tokens.access_token || !tokens.refresh_token) {
+            return res.status(400).json({
+                error: "Missing Google User ID || access token || refresh token"
+            })
+        }
         await prismaDB.user.upsert({
             where: {
                 googleUserID: userinfo.id,
@@ -60,13 +60,16 @@ auther.get("/google/callback", async (req, res) => {
                 refreshToken: tokens.refresh_token!,
             }
         });
-         
+
         // console.log("user info", userinfo);
         // console.log("Tokens", tokens);
+        // After successful authentication and getting user info:
+        const frontendSuccessUrl = `http://localhost:3000/auth/success?email=${encodeURIComponent(userinfo.email)}&name=${encodeURIComponent(userinfo.name)}&googleUserID=${encodeURIComponent(userinfo.id)}`;
+        res.redirect(frontendSuccessUrl);
         res.send("Google Drive connected succ!");
     } catch (error) {
-      console.error("Oauth error : ", error);
-      res.status(500).send("Google authentication failed");
+        console.error("Oauth error : ", error);
+        res.status(500).send("Google authentication failed");
     }
 });
 
