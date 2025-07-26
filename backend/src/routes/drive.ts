@@ -23,7 +23,7 @@ router.get("/scan", async (req, res) => {
             return res.status(404).json({
                 error: "User Not Found"
             })
-       
+
         oath2client.setCredentials({
             access_token: user.accessToken,
             refresh_token: user.refreshToken
@@ -132,6 +132,106 @@ router.delete("/delete", async (req, res) => {
         // console.error(error);
         return res.status(500).json({
             error: error
+        })
+    }
+})
+
+router.get("/stats", async (req, res) => {
+    try {
+        const email = req.query.email as string;
+        if (!email) {
+            return res.status(400).json({
+                error: "Email not provided"
+            })
+        }
+        const user = await prismaDB.user.findUnique({
+            where: {
+                email
+            }
+        })
+        if (!user) {
+            return res.status(404).json({
+                error: "User not found",
+            })
+        }
+        const totalFiles = await prismaDB.file.count({
+            where: {
+                userId: user.id
+            }
+        });
+        const cutoffDate = new Date();
+        cutoffDate.setFullYear(cutoffDate.getFullYear() - 1);
+
+        const unusedFilesCount = await prismaDB.file.count({
+            where: {
+                userId: user.id,
+                OR: [
+                    {
+                        lastViewedTime: {
+                            lt: cutoffDate.toISOString(),
+                        },
+                    },
+                    {
+                        lastViewedTime: "",
+                    },
+                    // {
+                    //     lastModifiedTime: null,
+                    // }
+                ],
+            },
+        })
+
+        const files = await prismaDB.file.findMany({
+            where: {
+                userId: user.id
+            },
+            select: {
+                size: true
+            }
+        });
+
+        const totalSize = files.reduce((acc, file) => {
+            return acc + (Number.parseInt(file.size) || 0)
+        }, 0)
+
+        const unusedFiles = await prismaDB.file.findMany({
+            where: {
+                userId: user.id,
+                OR: [
+                    {
+                        lastViewedTime: {
+                            lt: cutoffDate.toISOString(),
+                        },
+                    },
+                    {
+                        lastViewedTime: "",
+                    },
+                    // {
+                    //     lastViewedTime:undefined
+                    // },
+                ],
+            },
+            select: {
+                size: true,
+            },
+        })
+        const unusedSize = unusedFiles.reduce((acc, file) => {
+            return acc + (Number.parseInt(file.size) || 0)
+        }, 0)
+
+        return res.json({
+            totalFiles,
+            unusedFiles: unusedFilesCount,
+            totalSize,
+            unusedSize,
+            lastScanTime: user.lastScanTime,
+        })
+
+
+    } catch (error) {
+        console.error("Error fetching stats:", error)
+        return res.status(500).json({
+            error: "Failed to fetch stats",
         })
     }
 })
