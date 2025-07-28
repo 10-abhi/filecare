@@ -1,21 +1,25 @@
-import express from "express";
-import dotenv from"dotenv";
-import cors from "cors";
+import { AppDataSource } from "./data-source"
+import express from "express"
+import cors from "cors"
+import auther from "./routes/auth"
+import router from "./routes/drive"
+import cookieParser from "cookie-parser"
 
-dotenv.config();
 const app = express();
 app.use(cors());
+app.use(cookieParser());
 app.use(express.json());
 
-app.get("/",(req,res)=>{
-    res.send("API is running");
-})
-import auther from "./routes/auth";
-import router from "./routes/drive";
-app.use("/auth" , auther);
-app.use("/drive" , router);
+AppDataSource.initialize()
+.then(()=>{
+    console.log("DB connected");
+    app.use("/auth", auther);
+    app.use("/drive" , router);
 
-const PORT = process.env.PORT || 4000;
-app.listen(PORT , ()=>{
-    console.log(`API running at http://localhost:${PORT}`)
+    app.listen(4000 , ()=>{
+        console.log("Server running at http://localhost:4000");
+    })
 })
+.catch((error)=>{
+    console.log("Error connecting to the db", error);
+});
