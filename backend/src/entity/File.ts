@@ -1,9 +1,9 @@
-import { Column, CreateDateColumn, Entity, ManyToOne, PrimaryGeneratedColumn, UpdateDateColumn } from "typeorm";
+import { Column, CreateDateColumn, Entity, ManyToOne, PrimaryColumn, PrimaryGeneratedColumn, UpdateDateColumn } from "typeorm";
 import { User } from "./User";
 
 @Entity()
 export class File {
-    @PrimaryGeneratedColumn()
+    @PrimaryColumn()
     fileid: string
 
     @Column()
@@ -16,11 +16,17 @@ export class File {
     createdAt: Date;
 
     @UpdateDateColumn()
-    updatedAt: Date;
+    lastModifiedTime: Date;
 
     @Column({
         type: "timestamp",
         nullable: true
     })
-    lastViewedAt: Date;
+    lastViewedTime: Date;
+
+    @Column()
+    size : string
+
+    @Column()
+    mimeType : string
 }
