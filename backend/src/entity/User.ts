@@ -28,4 +28,6 @@ export class User {
     @OneToMany(()=>File , (file)=>file.user)
     files : File[];
 
+    @Column({type : "timestamp" , nullable : true})
+    lastScanTime : Date
 }

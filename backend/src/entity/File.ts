@@ -16,7 +16,7 @@ export class File {
     createdAt: Date;
 
     @UpdateDateColumn()
-    lastModifiedTime: Date;
+    updateAt: Date;
 
     @Column({
         type: "timestamp",
@@ -29,4 +29,8 @@ export class File {
 
     @Column()
     mimeType : string
+
+    @Column()
+    lastModifiedTime : Date;
+
 }
