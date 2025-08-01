@@ -1,20 +1,20 @@
-import { Entity, PrimaryGeneratedColumn, Column, OneToMany } from "typeorm"
+import { Entity, PrimaryGeneratedColumn, Column, OneToMany, CreateDateColumn, UpdateDateColumn } from "typeorm"
 import { File } from "./File"
 
 @Entity()
 export class User {
 
     @PrimaryGeneratedColumn("uuid")
-    id: number
+    id: string
 
-    @Column()
+    @Column({ nullable: true })
     name: string
 
-    @Column({unique:true})
-    email:string
+    @Column({ unique: true, nullable: true })
+    email: string
 
-    @Column()
-    googleUserID : string
+    @Column({ unique: true })
+    googleUserID: string
 
     @Column()
     accessToken: string;
@@ -23,11 +23,16 @@ export class User {
     refreshToken: string;
 
     @Column()
-    sessionToken : string;
+    sessionToken: string;
 
-    @OneToMany(()=>File , (file)=>file.user)
-    files : File[];
+    @OneToMany(() => File, (file) => file.user)
+    files: File[];
 
-    @Column({type : "timestamp" , nullable : true})
-    lastScanTime : Date
+    @Column({ type: "timestamp", nullable: true })
+    lastScanTime: Date
+
+    @CreateDateColumn()
+    createdAt: Date;
+    @UpdateDateColumn()
+    updatedAt: Date;
 }
