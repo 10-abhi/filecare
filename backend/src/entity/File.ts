@@ -1,36 +1,44 @@
-import { Column, CreateDateColumn, Entity, ManyToOne, PrimaryColumn, PrimaryGeneratedColumn, UpdateDateColumn } from "typeorm";
+import { Column, CreateDateColumn, Entity, Index, JoinColumn, ManyToOne, PrimaryColumn, PrimaryGeneratedColumn, UpdateDateColumn } from "typeorm";
 import { User } from "./User";
 
 @Entity()
+@Index(['userId'])
+@Index(["lastViewedTime"])
+@Index(["lastModifiedTime"])
+@Index(["userId", "lastViewedTime"])
 export class File {
-    @PrimaryColumn()
+    @PrimaryGeneratedColumn("uuid")
+    id: string
+
+    @Column({ unique: true })
     fileid: string
 
     @Column()
     name: string
 
     @ManyToOne(() => User, (user) => user.files, { onDelete: "CASCADE" })
+    @JoinColumn({name:"userId"})
     user: User;
+
+    @Column()
+    userId: string
 
     @CreateDateColumn()
     createdAt: Date;
 
     @UpdateDateColumn()
-    updateAt: Date;
+    updatedAt: Date;
 
-    @Column({
-        type: "timestamp",
-        nullable: true
-    })
+    @Column({type:"timestamp" , nullable : true})
     lastViewedTime: Date;
 
     @Column()
-    size : string
+    size: string
 
     @Column()
-    mimeType : string
+    mimeType: string
 
-    @Column()
-    lastModifiedTime : Date;
+    @Column({type : "timestamp" , nullable:true})
+    lastModifiedTime: Date;
 
 }
