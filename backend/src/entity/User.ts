@@ -22,6 +22,9 @@ export class User {
     @Column()
     refreshToken: string;
 
+    @Column({  type:'timestamp' ,nullable:true})
+    accessTokenExpiresAt : Date
+
     @Column()
     sessionToken: string;
 

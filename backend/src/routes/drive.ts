@@ -1,10 +1,8 @@
 import { Router } from "express";
 import { google } from "googleapis";
-import { oath2client } from "./auth";
-import { AppDataSource } from "../data-source";
-import { User } from "../entity/User";
-import { File } from "../entity/File";
+import { oauth2client } from "./auth";
 import { LessThan } from "typeorm";
+import { fileRepo , userRepo } from "./auth";
 
 const router = Router();
 
@@ -17,8 +15,6 @@ router.get("/scan", async (req, res) => {
             });
         }
 
-        const userRepo = AppDataSource.getRepository(User);
-        const fileRepo = AppDataSource.getRepository(File);
         const user = await userRepo.findOne({
             where: { email }
         });
@@ -28,12 +24,12 @@ router.get("/scan", async (req, res) => {
                 error: "User Not Found"
             });
 
-        oath2client.setCredentials({
+        oauth2client.setCredentials({
             access_token: user.accessToken,
             refresh_token: user.refreshToken
         });
 
-        const drive = google.drive({ version: "v3", auth: oath2client });
+        const drive = google.drive({ version: "v3", auth: oauth2client });
         const response = await drive.files.list({
             pageSize: 100,
             fields: "files(id, name, mimeType, modifiedTime, viewedByMeTime, size)",
@@ -98,9 +94,6 @@ router.get("/unused", async (req, res) => {
     //         email: email
     //     }
     // })
-
-    const userRepo = AppDataSource.getRepository(User);
-    const fileRepo = AppDataSource.getRepository(File);
     const user = await userRepo.findOne({ where: { email } });
 
     if (!user) return res.status(404).json({ error: "User not found " });
@@ -136,20 +129,18 @@ router.delete("/delete", async (req, res) => {
         }
 
         // const user = await prismaDB.user.findUnique({ where: { email } });
-        const userRepo = AppDataSource.getRepository(User);
-        const fileRepo = AppDataSource.getRepository(File);
         const user = await userRepo.findOne({ where: { email } });
 
         if (!user) {
             return res.json({ message: "User Not Found" });
         }
 
-        oath2client.setCredentials({
+        oauth2client.setCredentials({
             refresh_token: user.refreshToken,
             access_token: user.accessToken
         });
 
-        const drive = google.drive({ version: "v3", auth: oath2client });
+        const drive = google.drive({ version: "v3", auth: oauth2client });
         const deletedFiles: string[] = [];
         const failedFiles: string[] = [];
 
@@ -181,9 +172,6 @@ router.get("/stats", async (req, res) => {
         if (!email) {
             return res.status(400).json({ error: "Email not provided" });
         }
-
-        const userRepo = AppDataSource.getRepository(User);
-        const fileRepo = AppDataSource.getRepository(File);
         const user = await userRepo.findOne({ where: { email } });
 
         // const user = await prismaDB.user.findUnique({ where: { email } });
