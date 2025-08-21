@@ -37,10 +37,13 @@ router.get("/scan", async (req, res) => {
         });
 
         const files = response.data.files ?? [];
+        // console.log("All files in scan :", files);
+
         const thirtyDaysAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
         const oldFiles = files.filter(file => {
             return file.modifiedTime && new Date(file.modifiedTime) < thirtyDaysAgo;
         });
+        // console.log("Old files in scan:", oldFiles);
 
         for (const file of files) {
             if (file) {
@@ -55,7 +58,8 @@ router.get("/scan", async (req, res) => {
                 //         lastModifiedTime: file.modifiedTime || "",
                 //         lastViewedTime: file.viewedByMeTime || "",
                 //         userId: user.id
-                //     }
+                //     }Submit New Resume
+
                 // })
                 await fileRepo.upsert(
                     {
@@ -65,7 +69,8 @@ router.get("/scan", async (req, res) => {
                         mimeType: file.mimeType || "unknown",
                         lastModifiedTime: file.modifiedTime ? new Date(file.modifiedTime) : null,
                         lastViewedTime: file.viewedByMeTime ? new Date(file.viewedByMeTime) : null,
-                        user: user
+                        user: user,
+                        userId: user.id
                     },
                     ['fileid']
                 );
@@ -112,10 +117,11 @@ router.get("/unused", async (req, res) => {
 
     const unusedFiles = await fileRepo.find({
         where: [
-            { user, lastViewedTime: LessThan(cutoffDate) },
-            { user, lastViewedTime: null }
+            { userId: user.id, lastViewedTime: LessThan(cutoffDate) },
+            { userId: user.id, lastViewedTime: null }
         ]
     });
+    // console.log("Unused files:", unusedFiles);
 
     return res.json({ unusedFiles });
 });
@@ -180,9 +186,14 @@ router.get("/stats", async (req, res) => {
             return res.status(404).json({ error: "User not found" });
         }
 
-        // const totalFiles = await prismaDB.file.count({ where: { userId: user.id } });
-        const totalFiles = await fileRepo.count({ where: { user } });
+        // console.log("user.id type and value:", typeof user.id, user.id);
 
+        // Let's check all files in DB first
+        // const allFilesInDB = await fileRepo.find();
+
+        // const totalFiles = await prismaDB.file.count({ where: { userId: user.id } });
+        const totalFiles = await fileRepo.count({ where: { userId: user.id } });
+        // console.log("stats totalFiles count:", totalFiles);
         const cutoffDate = new Date();
         cutoffDate.setFullYear(cutoffDate.getFullYear() - 1);
 
@@ -195,17 +206,18 @@ router.get("/stats", async (req, res) => {
 
         const unusedFilesCount = await fileRepo.count({
             where: [
-                { user, lastViewedTime: LessThan(cutoffDate) },
-                { user, lastViewedTime: null }
+                { userId: user.id, lastViewedTime: LessThan(cutoffDate) },
+                { userId: user.id, lastViewedTime: null }
             ]
         });
+        // console.log("stats unusedFilesCount:", unusedFilesCount);
 
         // const files = await prismaDB.file.findMany({ where: { userId: user.id }, select: { size: true } });
         const files = await fileRepo.find({
-            where: { user },
+            where: { userId: user.id },
             select: { size: true }
         });
-
+        // console.log("stats files for size:", files);
         const totalSize = files.reduce((acc, file) => acc + (parseInt(file.size) || 0), 0);
 
         // const unusedFiles = await prismaDB.file.findMany({
@@ -217,12 +229,12 @@ router.get("/stats", async (req, res) => {
         // });
         const unusedFiles = await fileRepo.find({
             where: [
-                { user, lastViewedTime: LessThan(cutoffDate) },
-                { user, lastViewedTime: null }
+                { userId: user.id, lastViewedTime: LessThan(cutoffDate) },
+                { userId: user.id, lastViewedTime: null }
             ],
             select: { size: true }
         });
-
+        console.log("Unused files for size in stats:", unusedFiles);
         const unusedSize = unusedFiles.reduce((acc, file) => acc + (parseInt(file.size) || 0), 0);
 
         return res.json({
