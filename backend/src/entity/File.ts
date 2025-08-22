@@ -41,4 +41,19 @@ export class File {
     @Column({type : "timestamp" , nullable:true})
     lastModifiedTime: Date;
 
+    @Column({ default: false })
+    isOwnedByUser: boolean;
+
+    @Column({ default: false })
+    canDelete: boolean;
+
+    @Column({ default: false })
+    canTrash: boolean;
+
+    @Column({ nullable: true })
+    ownerEmail: string;
+
+    @Column({ default: false })
+    isShared: boolean;
+
 }
