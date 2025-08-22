@@ -134,7 +134,6 @@ router.delete("/delete", async (req, res) => {
             return res.json({ error: "No proper data provided" });
         }
 
-        // const user = await prismaDB.user.findUnique({ where: { email } });
         const user = await userRepo.findOne({ where: { email } });
 
         if (!user) {
@@ -146,16 +145,34 @@ router.delete("/delete", async (req, res) => {
             access_token: user.accessToken
         });
 
+        // Refresh token if needed
+        try {
+            const { credentials } = await oauth2client.refreshAccessToken();
+            if (credentials.access_token) {
+                user.accessToken = credentials.access_token;
+                if (credentials.expiry_date) {
+                    user.accessTokenExpiresAt = new Date(credentials.expiry_date);
+                }
+                await userRepo.save(user);
+                oauth2client.setCredentials(credentials);
+            }
+        } catch (refreshError) {
+            console.log("Token refresh failed, continuing with existing token:", refreshError);
+        }
+
         const drive = google.drive({ version: "v3", auth: oauth2client });
         const deletedFiles: string[] = [];
         const failedFiles: string[] = [];
 
         for (const fileId of fileIds) {
             try {
-                await drive.files.delete({ fileId });
+                await drive.files.delete({
+                    fileId: fileId,
+                });
+                console.log(`Successfully Deleted file ${fileId}`);
                 deletedFiles.push(fileId);
 
-                // await prismaDB.file.delete({ where: { fileid: fileId } })
+                // Remove from our database
                 await fileRepo.delete({ fileid: fileId });
 
             } catch (error: any) {
@@ -165,6 +182,72 @@ router.delete("/delete", async (req, res) => {
         }
 
         return res.json({ success: true, deletedFiles, failedFiles });
+
+    } catch (error) {
+        return res.status(500).json({ error: error });
+    }
+});
+
+
+router.post("/trash", async (req, res) => {
+    try {
+        const { email, fileIds } = req.body;
+
+        if (!email || !fileIds || !Array.isArray(fileIds)) {
+            return res.json({ error: "No proper data provided" });
+        }
+
+        const user = await userRepo.findOne({ where: { email } });
+
+        if (!user) {
+            return res.json({ message: "User Not Found" });
+        }
+
+        oauth2client.setCredentials({
+            refresh_token: user.refreshToken,
+            access_token: user.accessToken
+        });
+
+        // Refresh token if needed
+        try {
+            const { credentials } = await oauth2client.refreshAccessToken();
+            if (credentials.access_token) {
+                user.accessToken = credentials.access_token;
+                if (credentials.expiry_date) {
+                    user.accessTokenExpiresAt = new Date(credentials.expiry_date);
+                }
+                await userRepo.save(user);
+                oauth2client.setCredentials(credentials);
+            }
+        } catch (refreshError) {
+            console.log("Token refresh failed, continuing with existing token:", refreshError);
+        }
+
+        const drive = google.drive({ version: "v3", auth: oauth2client });
+        const trashedFile: string[] = [];
+        const failedFiles: string[] = [];
+
+        for (const fileId of fileIds) {
+            try {
+                await drive.files.update({
+                    fileId: fileId,
+                    requestBody :{
+                        trashed : true
+                    }
+                });
+                console.log(`Successfully Trashed file ${fileId}`);
+                trashedFile.push(fileId);
+
+                // Remove from our database
+                await fileRepo.delete({ fileid: fileId });
+
+            } catch (error: any) {
+                console.error(`Failed to Trash ${fileId}:`, error.message);
+                failedFiles.push(fileId);
+            }
+        }
+
+        return res.json({ success: true, trashedFile, failedFiles });
 
     } catch (error) {
         return res.status(500).json({ error: error });
