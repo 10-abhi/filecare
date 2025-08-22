@@ -47,20 +47,6 @@ router.get("/scan", async (req, res) => {
 
         for (const file of files) {
             if (file) {
-                // await prismaDB.file.upsert({
-                //     where: { fileid: file.id! },
-                //     update: {},
-                //     create: {
-                //         fileid: file.id!,
-                //         name: file.name || "Untitled",
-                //         size: file.size?.toString() || "0",
-                //         mimeType: file.mimeType || "unknown",
-                //         lastModifiedTime: file.modifiedTime || "",
-                //         lastViewedTime: file.viewedByMeTime || "",
-                //         userId: user.id
-                //     }Submit New Resume
-
-                // })
                 await fileRepo.upsert(
                     {
                         fileid: file.id!,
@@ -94,26 +80,12 @@ router.get("/scan", async (req, res) => {
 router.get("/unused", async (req, res) => {
     const email = req.query.email as string;
 
-    // const user = await prismaDB.user.findUnique({
-    //     where: {
-    //         email: email
-    //     }
-    // })
     const user = await userRepo.findOne({ where: { email } });
 
     if (!user) return res.status(404).json({ error: "User not found " });
 
     const cutoffDate = new Date();
     cutoffDate.setFullYear(cutoffDate.getFullYear() - 1);
-
-    // const unusedFiles = await prismaDB.file.findMany({
-    //     where: {
-    //         userId: user.id,
-    //         lastViewedTime: {
-    //             lt: cutoffDate.toISOString()
-    //         },
-    //     },
-    // });
 
     const unusedFiles = await fileRepo.find({
         where: [
@@ -145,7 +117,7 @@ router.delete("/delete", async (req, res) => {
             access_token: user.accessToken
         });
 
-        // Refresh token if needed
+        //refresh token if needed
         try {
             const { credentials } = await oauth2client.refreshAccessToken();
             if (credentials.access_token) {
@@ -172,7 +144,6 @@ router.delete("/delete", async (req, res) => {
                 console.log(`Successfully Deleted file ${fileId}`);
                 deletedFiles.push(fileId);
 
-                // Remove from our database
                 await fileRepo.delete({ fileid: fileId });
 
             } catch (error: any) {
@@ -263,29 +234,16 @@ router.get("/stats", async (req, res) => {
         }
         const user = await userRepo.findOne({ where: { email } });
 
-        // const user = await prismaDB.user.findUnique({ where: { email } });
-
         if (!user) {
             return res.status(404).json({ error: "User not found" });
         }
 
         // console.log("user.id type and value:", typeof user.id, user.id);
 
-        // Let's check all files in DB first
-        // const allFilesInDB = await fileRepo.find();
-
-        // const totalFiles = await prismaDB.file.count({ where: { userId: user.id } });
         const totalFiles = await fileRepo.count({ where: { userId: user.id } });
         // console.log("stats totalFiles count:", totalFiles);
         const cutoffDate = new Date();
         cutoffDate.setFullYear(cutoffDate.getFullYear() - 1);
-
-        // const unusedFilesCount = await prismaDB.file.count({
-        //     where: {
-        //         userId: user.id,
-        //         OR: [{ lastViewedTime: { lt: cutoffDate.toISOString() } }, { lastViewedTime: "" }]
-        //     }
-        // });
 
         const unusedFilesCount = await fileRepo.count({
             where: [
@@ -295,7 +253,6 @@ router.get("/stats", async (req, res) => {
         });
         // console.log("stats unusedFilesCount:", unusedFilesCount);
 
-        // const files = await prismaDB.file.findMany({ where: { userId: user.id }, select: { size: true } });
         const files = await fileRepo.find({
             where: { userId: user.id },
             select: { size: true }
@@ -303,13 +260,6 @@ router.get("/stats", async (req, res) => {
         // console.log("stats files for size:", files);
         const totalSize = files.reduce((acc, file) => acc + (parseInt(file.size) || 0), 0);
 
-        // const unusedFiles = await prismaDB.file.findMany({
-        //     where: {
-        //         userId: user.id,
-        //         OR: [{ lastViewedTime: { lt: cutoffDate.toISOString() } }, { lastViewedTime: "" }]
-        //     },
-        //     select: { size: true }
-        // });
         const unusedFiles = await fileRepo.find({
             where: [
                 { userId: user.id, lastViewedTime: LessThan(cutoffDate) },
