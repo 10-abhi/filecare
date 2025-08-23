@@ -32,7 +32,7 @@ router.get("/scan", async (req, res) => {
         const drive = google.drive({ version: "v3", auth: oauth2client });
         const response = await drive.files.list({
             pageSize: 100,
-            fields: "files(id, name, mimeType, modifiedTime, viewedByMeTime, size)",
+            fields: "files(id, name, mimeType, modifiedTime, viewedByMeTime, size , owners(emailAddress) , permissions)",
             q: "trashed = false",
         });
 
@@ -47,6 +47,19 @@ router.get("/scan", async (req, res) => {
 
         for (const file of files) {
             if (file) {
+                const ownerEmail = file.owners?.[0]?.emailAddress || null;
+                const isOwnedByUser = ownerEmail === email;
+                let canDelete = false;
+                let canTrash = false;
+                let isShared = false;
+                if(file.permissions){
+                    for(const perm of file.permissions){
+                        if(perm.role !== "owner")isShared = true;
+                        if(perm?.permissionDetails){
+                            canDelete = perm.permissionDetails.some((p:any)=>p?.inheritedFrom == null && p?.role == "owner");
+                        }
+                    }
+                }
                 await fileRepo.upsert(
                     {
                         fileid: file.id!,
@@ -56,7 +69,12 @@ router.get("/scan", async (req, res) => {
                         lastModifiedTime: file.modifiedTime ? new Date(file.modifiedTime) : null,
                         lastViewedTime: file.viewedByMeTime ? new Date(file.viewedByMeTime) : null,
                         user: user,
-                        userId: user.id
+                        userId: user.id,
+                        ownerEmail ,
+                        isOwnedByUser,
+                        canDelete,
+                        canTrash,
+                        isShared
                     },
                     ['fileid']
                 );
