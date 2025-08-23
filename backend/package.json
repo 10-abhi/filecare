@@ -6,7 +6,11 @@
       "test": "echo \"Error: no test specified\" && exit 1",
       "dev": "tsc && node dist/index.js",
       "start": "ts-node src/index.ts",
-      "typeorm": "typeorm-ts-node-commonjs"
+      "typeorm": "typeorm-ts-node-commonjs",
+      
+      "migration:generate": "npm run typeorm -- migration:generate ./src/migrations/NewMigration -d ./src/data-source.ts",
+      "migration:run": "npm run typeorm -- migration:run -d ./dist/data-source.js",
+      "migration:revert": "npm run typeorm -- migration:revert -d ./dist/data-source.js"
    },
    "keywords": [],
    "author": "",
