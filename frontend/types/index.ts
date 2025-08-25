@@ -16,6 +16,11 @@ export interface File {
   userId: string
   createdAt: Date
   updatedAt: Date
+  isOwnedByUser: boolean
+  canDelete: boolean
+  canTrash: boolean
+  ownerEmail: string
+  isShared: boolean
 }
 
 export interface Stats {
