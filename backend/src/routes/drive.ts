@@ -302,4 +302,99 @@ router.get("/stats", async (req, res) => {
     }
 });
 
-export default router;
+//remove files from user's view if not owner
+router.post("/remove", async (req, res) => {
+    try {
+        const { email, fileIds } = req.body;
+
+        if (!email || !fileIds || !Array.isArray(fileIds)) {
+            return res.status(400).json({ error: "Email and fileIds array are required" });
+        }
+
+        const user = await userRepo.findOne({ where: { email } });
+
+        if (!user) {
+            return res.status(404).json({ error: "User not found" });
+        }
+
+        oauth2client.setCredentials({
+            refresh_token: user.refreshToken,
+            access_token: user.accessToken
+        });
+
+        try {
+            const { credentials } = await oauth2client.refreshAccessToken();
+            if (credentials.access_token) {
+                user.accessToken = credentials.access_token;
+                if (credentials.expiry_date) {
+                    user.accessTokenExpiresAt = new Date(credentials.expiry_date);
+                }
+                await userRepo.save(user);
+                oauth2client.setCredentials(credentials);
+            }
+        } catch (refreshError) {
+            console.log("Token refresh failed, continuing with existing token:", refreshError);
+        }
+
+        const drive = google.drive({ version: "v3", auth: oauth2client });
+        const removedFiles: string[] = [];
+        const failedFiles: string[] = [];
+
+        for (const fileId of fileIds) {
+            try {
+                const dbFile = await fileRepo.findOne({ 
+                    where: { fileid: fileId, userId: user.id } 
+                });
+
+                if (!dbFile) {
+                    failedFiles.push(fileId);
+                    continue;
+                }
+
+                if (dbFile.isOwnedByUser) {
+                    // ff user owns the file they should use delete or trash instead
+                    failedFiles.push(fileId);
+                    console.log(`Cannot remove owned file ${fileId}, use delete/trash instead`);
+                    continue;
+                }
+
+                // for shared files, remove users permission/
+                const permissions = await drive.permissions.list({
+                    fileId: fileId,
+                    fields: "permissions(id,emailAddress,role)"
+                });
+
+                const userPermission = permissions.data.permissions?.find(
+                    perm => perm.emailAddress === email
+                );
+
+                if (userPermission && userPermission.id) {
+                    await drive.permissions.delete({
+                        fileId: fileId,
+                        permissionId: userPermission.id
+                    });
+                }
+
+                await fileRepo.delete({ fileid: fileId, userId: user.id });
+                
+                // console.log(`Successfully removed file ${fileId} from user's view`);
+                removedFiles.push(fileId);
+
+            } catch (error: any) {
+                // console.error(`Failed to remove ${fileId}:`, error.message);
+                failedFiles.push(fileId);
+            }
+        }
+
+        return res.json({ 
+            success: true, 
+            removedFiles, 
+            failedFiles,
+            message: `Removed ${removedFiles.length} files from your view`
+        });
+
+    } catch (error) {
+        console.error("Error in remove route:", error);
+        return res.status(500).json({ error: "Failed to remove files" });
+    }
+});
