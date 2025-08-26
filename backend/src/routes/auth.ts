@@ -26,6 +26,7 @@ auther.get("/google", (req, res) => {
         access_type: "offline",
         scope: scopes,
         prompt: "consent",
+        include_granted_scopes: true,
     });
     res.redirect(authUrl);
 });
