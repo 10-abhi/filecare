@@ -398,3 +398,35 @@ router.post("/remove", async (req, res) => {
         return res.status(500).json({ error: "Failed to remove files" });
     }
 });
+
+//get shared(not owned by user) file route
+router.get("/shared", async (req, res) => {
+    try {
+        const email = req.query.email as string;
+
+        if (!email) {
+            return res.status(400).json({ error: "Email parameter is required" });
+        }
+
+        const user = await userRepo.findOne({ where: { email } });
+
+        if (!user) {
+            return res.status(404).json({ error: "User not found" });
+        }
+
+        //files that are shared (not owned by user)
+        const sharedFiles = await fileRepo.find({
+            where: { 
+                userId: user.id, 
+                isOwnedByUser: false 
+            },
+            order: { lastModifiedTime: 'DESC' }
+        });
+
+        return res.json({ sharedFiles });
+
+    } catch (error) {
+        console.error("Error getting shared files:", error);
+        return res.status(500).json({ error: "Failed to get shared files" });
+    }
+});
