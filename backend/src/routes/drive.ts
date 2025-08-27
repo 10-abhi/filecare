@@ -430,3 +430,45 @@ router.get("/shared", async (req, res) => {
         return res.status(500).json({ error: "Failed to get shared files" });
     }
 });
+// get large files route , files over specified size
+router.get("/large", async (req, res) => {
+    try {
+        const email = req.query.email as string;
+        const minSize = parseInt(req.query.minSize as string) || 100 * 1024 * 1024; // Default 100MB
+
+        if (!email) {
+            return res.status(400).json({ error: "Email parameter is required" });
+        }
+
+        const user = await userRepo.findOne({ where: { email } });
+
+        if (!user) {
+            return res.status(404).json({ error: "User not found" });
+        }
+
+        const allFiles = await fileRepo.find({
+            where: { userId: user.id },
+            order: { size: 'DESC' }
+        });
+
+        const largeFiles = allFiles.filter(file => {
+            const fileSize = parseInt(file.size) || 0;
+            return fileSize >= minSize;
+        });
+
+        const totalLargeSize = largeFiles.reduce((acc, file) => acc + (parseInt(file.size) || 0), 0);
+
+        return res.json({ 
+            largeFiles,
+            count: largeFiles.length,
+            totalSize: totalLargeSize,
+            minSize: minSize
+        });
+
+    } catch (error) {
+        console.error("Error getting large files:", error);
+        return res.status(500).json({ error: "Failed to get large files" });
+    }
+});
+
+export default router;
