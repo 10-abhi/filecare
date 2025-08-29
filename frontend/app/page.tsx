@@ -1,9 +1,9 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
-import { ArrowRight, Shield, Zap, Trash2, BarChart3, Sparkles } from "lucide-react"
+import { ArrowRight, Shield, Zap, Trash2, BarChart3, Sparkles, UserCheck } from "lucide-react"
 import Link from "next/link"
 import { AuthModal } from "@/components/auth-modal"
 import { useAuth } from "@/context/auth-context"
@@ -16,11 +16,18 @@ export default function HomePage() {
 
   console.log("Homepage render:", { isAuthenticated, user, isLoading, showAuthModal })
 
+  // Redirect authenticated users automatically
+  useEffect(() => {
+    if (isAuthenticated && user && !isLoading) {
+      console.log("User is authenticated, redirecting to dashboard...")
+      router.push("/dashboard")
+    }
+  }, [isAuthenticated, user, isLoading, router])
+
   //handle authentication success
   const handleAuthSuccess = () => {
     console.log("Auth success callback triggered")
     setShowAuthModal(false)
-    //the redirect will be handled by the AuthModal
   }
 
   const handleAuthClick = () => {
@@ -67,8 +74,11 @@ export default function HomePage() {
         </div>
         <div className="flex items-center gap-2 sm:gap-4">
           {isAuthenticated && user && (
-            <div className="text-xs sm:text-sm text-gray-300 hidden sm:block max-w-32 sm:max-w-none truncate">
-              Welcome, <span className="text-blue-400">{user.name}</span>
+            <div className="flex items-center gap-2">
+              <div className="w-2 h-2 bg-green-400 rounded-full animate-pulse"></div>
+              <div className="text-xs sm:text-sm text-gray-300 hidden sm:block max-w-32 sm:max-w-none truncate">
+                Welcome, <span className="text-blue-400">{user.name}</span>
+              </div>
             </div>
           )}
           <Button
@@ -77,7 +87,14 @@ export default function HomePage() {
             className="border-gray-700 hover:border-blue-500 transition-all duration-300 hover:shadow-lg hover:shadow-blue-500/25 bg-transparent text-xs sm:text-sm px-3 sm:px-4"
             onClick={handleAuthClick}
           >
-            {isAuthenticated ? "Dashboard" : "Sign In"}
+            {isAuthenticated ? (
+              <span className="flex items-center gap-2">
+                <UserCheck className="w-3 h-3" />
+                Dashboard
+              </span>
+            ) : (
+              "Sign In"
+            )}
           </Button>
         </div>
       </nav>
@@ -172,9 +189,19 @@ export default function HomePage() {
                 description: "Your data stays private. We only access what's necessary for cleanup",
               },
               {
+              icon: Shield,
+              title: "Smart Analytics",
+              description: "Get detailed insights about your file usage patterns and storage optimization opportunities",
+            },
+              {
+                icon: UserCheck,
+                title: "Permission Management",
+                description: "Understand file ownership and manage shared files with appropriate actions",
+              },
+              {
                 icon: Zap,
-                title: "Lightning Fast",
-                description: "Scan thousands of files in seconds with our optimized algorithms",
+                title: "Large File Discovery",
+                description: "Quickly find and manage files that are taking up the most space",
               },
               {
                 icon: Sparkles,
