@@ -12,6 +12,10 @@ export const API_CONFIG = {
       STATS: '/drive/stats',
       UNUSED: '/drive/unused',
       DELETE: '/drive/delete',
+      TRASH: '/drive/trash',
+      REMOVE: '/drive/remove',
+      SHARED: '/drive/shared',
+      LARGE: '/drive/large',
     }
   }
 } as const;
