@@ -64,3 +64,39 @@ export interface DeleteResponse {
   deletedFiles: string[]
   failedFiles: string[]
 }
+
+export interface RemoveResponse {
+  success: boolean
+  removedFiles: string[]
+  failedFiles: string[]
+  message: string
+}
+
+export interface FileDetailsResponse {
+  file: {
+    id: string
+    name: string
+    mimeType: string
+    size: string
+    createdTime: string
+    modifiedTime: string
+    viewedByMeTime: string
+    owners: Array<{ emailAddress: string }>
+    permissions: Array<{ id: string, emailAddress: string, role: string }>
+    webViewLink: string
+    iconLink: string
+    thumbnailLink: string
+  }
+  dbInfo: File
+}
+
+export interface SharedFilesResponse {
+  sharedFiles: File[]
+}
+
+export interface LargeFilesResponse {
+  largeFiles: File[]
+  count: number
+  totalSize: number
+  minSize: number
+}
