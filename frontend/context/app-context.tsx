@@ -2,6 +2,7 @@
 
 import { createContext, useContext, useEffect, useState, useCallback, type ReactNode } from "react"
 import { useAuth } from "./auth-context"
+import { apiRequest, API_CONFIG } from "@/lib/api-config"
 import type {
   File,
   Stats,
@@ -10,19 +11,28 @@ import type {
   StatsResponse,
   ScanResponse,
   DeleteResponse,
+  RemoveResponse,
+  SharedFilesResponse,
+  LargeFilesResponse,
 } from "@/types"
 
 interface AppContextType {
   files: File[]
   unusedFiles: File[]
+  sharedFiles: File[]
+  largeFiles: File[]
   stats: Stats
   loading: boolean
   scanning: boolean
   deleting: boolean
+  removing: boolean
   lastScanTime: string | null
   hasData: boolean
   scanFiles: () => Promise<void>
   deleteFiles: (fileIds: string[]) => Promise<DeleteResult>
+  removeFiles: (fileIds: string[]) => Promise<DeleteResult>
+  loadSharedFiles: () => Promise<void>
+  loadLargeFiles: (minSize?: number) => Promise<void>
   refreshData: () => Promise<void>
   loadCachedData: () => Promise<void>
 }
@@ -33,9 +43,12 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const { user, isAuthenticated } = useAuth()
   const [files, setFiles] = useState<File[]>([])
   const [unusedFiles, setUnusedFiles] = useState<File[]>([])
+  const [sharedFiles, setSharedFiles] = useState<File[]>([])
+  const [largeFiles, setLargeFiles] = useState<File[]>([])
   const [loading, setLoading] = useState(false)
   const [scanning, setScanning] = useState(false)
   const [deleting, setDeleting] = useState(false)
+  const [removing, setRemoving] = useState(false)
   const [lastScanTime, setLastScanTime] = useState<string | null>(null)
   const [hasData, setHasData] = useState(false)
   const [statsLoading, setStatsLoading] = useState(false)
@@ -72,9 +85,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
 
     setStatsLoading(true)
     try {
-      const response = await fetch(`http://localhost:4000/drive/stats?email=${encodeURIComponent(user.email)}`, {
-        credentials: "include",
-      })
+      const response = await apiRequest(`${API_CONFIG.ENDPOINTS.DRIVE.STATS}?email=${encodeURIComponent(user.email)}`)
 
       if (response.ok) {
         const data: StatsResponse = await response.json()
@@ -103,9 +114,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
     setLoading(true)
     try {
       // Load unused files
-      const unusedResponse = await fetch(`http://localhost:4000/drive/unused?email=${encodeURIComponent(user.email)}`, {
-        credentials: "include",
-      })
+      const unusedResponse = await apiRequest(`${API_CONFIG.ENDPOINTS.DRIVE.UNUSED}?email=${encodeURIComponent(user.email)}`)
 
       if (unusedResponse.ok) {
         const unusedData: UnusedFilesResponse = await unusedResponse.json()
@@ -118,6 +127,12 @@ export function AppProvider({ children }: { children: ReactNode }) {
           lastViewedTime: file.lastViewedTime ? new Date(file.lastViewedTime) : null,
           createdAt: new Date(file.createdAt),
           updatedAt: new Date(file.updatedAt),
+          // Add default values for new permission fields if not present
+          isOwnedByUser: file.isOwnedByUser ?? false,
+          canDelete: file.canDelete ?? false,
+          canTrash: file.canTrash ?? false,
+          ownerEmail: file.ownerEmail ?? '',
+          isShared: file.isShared ?? false,
         }))
 
         setUnusedFiles(processedUnusedFiles)
@@ -147,9 +162,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
 
     try {
       // Scan files
-      const scanResponse = await fetch(`http://localhost:4000/drive/scan?email=${encodeURIComponent(user.email)}`, {
-        credentials: "include",
-      })
+      const scanResponse = await apiRequest(`${API_CONFIG.ENDPOINTS.DRIVE.SCAN}?email=${encodeURIComponent(user.email)}`)
 
       if (!scanResponse.ok) {
         const errorData = await scanResponse.json()
@@ -159,9 +172,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
       const scanData: ScanResponse = await scanResponse.json()
       console.log("Scan completed:", scanData)
 
-      const unusedResponse = await fetch(`http://localhost:4000/drive/unused?email=${encodeURIComponent(user.email)}`, {
-        credentials: "include",
-      })
+      const unusedResponse = await apiRequest(`${API_CONFIG.ENDPOINTS.DRIVE.UNUSED}?email=${encodeURIComponent(user.email)}`)
 
       if (unusedResponse.ok) {
         const unusedData: UnusedFilesResponse = await unusedResponse.json()
@@ -174,6 +185,12 @@ export function AppProvider({ children }: { children: ReactNode }) {
           lastViewedTime: file.lastViewedTime ? new Date(file.lastViewedTime) : null,
           createdAt: new Date(file.createdAt),
           updatedAt: new Date(file.updatedAt),
+          // Add default values for new permission fields if not present
+          isOwnedByUser: file.isOwnedByUser ?? false,
+          canDelete: file.canDelete ?? false,
+          canTrash: file.canTrash ?? false,
+          ownerEmail: file.ownerEmail ?? '',
+          isShared: file.isShared ?? false,
         }))
 
         setUnusedFiles(processedUnusedFiles)
@@ -205,12 +222,8 @@ export function AppProvider({ children }: { children: ReactNode }) {
     setDeleting(true)
 
     try {
-      const response = await fetch("http://localhost:4000/drive/delete", {
+      const response = await apiRequest(API_CONFIG.ENDPOINTS.DRIVE.DELETE, {
         method: "DELETE",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        credentials: "include",
         body: JSON.stringify({
           email: user.email,
           fileIds: fileIds,
@@ -248,6 +261,110 @@ export function AppProvider({ children }: { children: ReactNode }) {
     }
   }
 
+  // Remove files (for shared files that user doesn't own)
+  const removeFiles = async (fileIds: string[]): Promise<DeleteResult> => {
+    if (!user?.email || fileIds.length === 0) {
+      throw new Error("Invalid parameters for file removal")
+    }
+
+    setRemoving(true)
+
+    try {
+      const response = await apiRequest(API_CONFIG.ENDPOINTS.DRIVE.REMOVE, {
+        method: "POST",
+        body: JSON.stringify({
+          email: user.email,
+          fileIds: fileIds,
+        }),
+      })
+
+      if (!response.ok) {
+        const errorData = await response.json()
+        throw new Error(errorData.error || "Failed to remove files")
+      }
+
+      const data: RemoveResponse = await response.json()
+
+      // Remove files from all relevant state arrays
+      const removedIds = data.removedFiles || []
+      const updatedFiles = files.filter((file) => !removedIds.includes(file.fileid))
+      const updatedUnused = unusedFiles.filter((file) => !removedIds.includes(file.fileid))
+      const updatedShared = sharedFiles.filter((file) => !removedIds.includes(file.fileid))
+
+      setFiles(updatedFiles)
+      setUnusedFiles(updatedUnused)
+      setSharedFiles(updatedShared)
+      calculateStats(updatedFiles, updatedUnused)
+
+      // Reload stats
+      await loadStats()
+
+      return {
+        deletedCount: removedIds.length,
+        failedCount: data.failedFiles?.length || 0,
+      }
+    } catch (error) {
+      console.error("Error removing files:", error)
+      throw error
+    } finally {
+      setRemoving(false)
+    }
+  }
+
+  // Load shared files
+  const loadSharedFiles = async (): Promise<void> => {
+    if (!user?.email) {
+      throw new Error("User not authenticated")
+    }
+
+    try {
+      const response = await apiRequest(`${API_CONFIG.ENDPOINTS.DRIVE.SHARED}?email=${encodeURIComponent(user.email)}`)
+
+      if (response.ok) {
+        const data: SharedFilesResponse = await response.json()
+        const processedSharedFiles = (data.sharedFiles || []).map((file) => ({
+          ...file,
+          lastModifiedTime: file.lastModifiedTime ? new Date(file.lastModifiedTime) : null,
+          lastViewedTime: file.lastViewedTime ? new Date(file.lastViewedTime) : null,
+          createdAt: new Date(file.createdAt),
+          updatedAt: new Date(file.updatedAt),
+        }))
+
+        setSharedFiles(processedSharedFiles)
+      }
+    } catch (error) {
+      console.error("Error loading shared files:", error)
+      throw error
+    }
+  }
+
+  // Load large files
+  const loadLargeFiles = async (minSize: number = 100 * 1024 * 1024): Promise<void> => {
+    if (!user?.email) {
+      throw new Error("User not authenticated")
+    }
+
+    try {
+      const response = await apiRequest(`${API_CONFIG.ENDPOINTS.DRIVE.LARGE}?email=${encodeURIComponent(user.email)}&minSize=${minSize}`)
+
+      if (response.ok) {
+        const data: LargeFilesResponse = await response.json()
+        const processedLargeFiles = (data.largeFiles || []).map((file) => ({
+          ...file,
+          lastModifiedTime: file.lastModifiedTime ? new Date(file.lastModifiedTime) : null,
+          lastViewedTime: file.lastViewedTime ? new Date(file.lastViewedTime) : null,
+          createdAt: new Date(file.createdAt),
+          updatedAt: new Date(file.updatedAt),
+        }))
+
+        setLargeFiles(processedLargeFiles)
+      }
+    } catch (error) {
+      console.error("Error loading large files:", error)
+      throw error
+    }
+  }
+
   const refreshData = async (): Promise<void> => {
     if (isAuthenticated) {
       await loadCachedData()
@@ -262,6 +379,8 @@ export function AppProvider({ children }: { children: ReactNode }) {
       // Clear data when user logs out
       setFiles([])
       setUnusedFiles([])
+      setSharedFiles([])
+      setLargeFiles([])
       setHasData(false)
       setLastScanTime(null)
       setStats({
@@ -276,14 +395,20 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const value: AppContextType = {
     files,
     unusedFiles,
+    sharedFiles,
+    largeFiles,
     stats,
     loading,
     scanning,
     deleting,
+    removing,
     lastScanTime,
     hasData,
     scanFiles,
     deleteFiles,
+    removeFiles,
+    loadSharedFiles,
+    loadLargeFiles,
     refreshData,
     loadCachedData,
   }
