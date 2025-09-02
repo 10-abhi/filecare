@@ -258,21 +258,37 @@ router.get("/stats", async (req, res) => {
 
         // console.log("user.id type and value:", typeof user.id, user.id);
 
-        const totalFiles = await fileRepo.count({ where: { userId: user.id } });
+        const totalFiles = await fileRepo.count({ 
+            where: { 
+                userId: user.id,
+                isOwnedByUser: true 
+            } 
+        });
         // console.log("stats totalFiles count:", totalFiles);
         const cutoffDate = new Date();
         cutoffDate.setFullYear(cutoffDate.getFullYear() - 1);
 
         const unusedFilesCount = await fileRepo.count({
             where: [
-                { userId: user.id, lastViewedTime: LessThan(cutoffDate) },
-                { userId: user.id, lastViewedTime: null }
+                { 
+                    userId: user.id, 
+                    lastViewedTime: LessThan(cutoffDate),
+                    isOwnedByUser: true  
+                },
+                { 
+                    userId: user.id, 
+                    lastViewedTime: null,
+                    isOwnedByUser: true 
+                }
             ]
         });
         // console.log("stats unusedFilesCount:", unusedFilesCount);
 
         const files = await fileRepo.find({
-            where: { userId: user.id },
+            where: { 
+                userId: user.id,
+                isOwnedByUser: true
+            },
             select: { size: true }
         });
         // console.log("stats files for size:", files);
@@ -280,19 +296,36 @@ router.get("/stats", async (req, res) => {
 
         const unusedFiles = await fileRepo.find({
             where: [
-                { userId: user.id, lastViewedTime: LessThan(cutoffDate) },
-                { userId: user.id, lastViewedTime: null }
+                { 
+                    userId: user.id, 
+                    lastViewedTime: LessThan(cutoffDate),
+                    isOwnedByUser: true
+                },
+                { 
+                    userId: user.id, 
+                    lastViewedTime: null,
+                    isOwnedByUser: true 
+                }
             ],
             select: { size: true }
         });
         console.log("Unused files for size in stats:", unusedFiles);
         const unusedSize = unusedFiles.reduce((acc, file) => acc + (parseInt(file.size) || 0), 0);
 
+        //shared files count for separate analytics
+        const sharedFilesCount = await fileRepo.count({
+            where: {
+                userId: user.id,
+                isOwnedByUser: false  
+            }
+        });
+
         return res.json({
             totalFiles,
             unusedFiles: unusedFilesCount,
             totalSize,
             unusedSize,
+            sharedFilesCount,
             lastScanTime: user.lastScanTime,
         });
 
