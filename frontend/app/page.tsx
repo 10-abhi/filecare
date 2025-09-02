@@ -17,9 +17,6 @@ export default function HomePage() {
 
   console.log("Homepage render:", { isAuthenticated, user, isLoading, showAuthModal })
 
-  // Don't automatically redirect authenticated users anymore
-  // Let them access the home page if they want to
-
   //handle authentication success
   const handleAuthSuccess = () => {
     console.log("Auth success callback triggered")
