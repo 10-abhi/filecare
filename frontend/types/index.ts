@@ -26,8 +26,11 @@ export interface File {
 export interface Stats {
   totalFiles: number
   unusedFiles: number
-  totalSize: string
+  totalSize: string | number
+  unusedSize: string | number
   potentialSavings: string
+  sharedFilesCount?: number
+  lastScanTime?: string | null
 }
 
 export interface DeleteResult {
@@ -52,6 +55,7 @@ export interface StatsResponse {
   totalSize: number
   unusedSize: number
   lastScanTime: string | null
+  sharedFilesCount?: number
 }
 
 export interface ScanResponse {
