@@ -56,7 +56,9 @@ export function AppProvider({ children }: { children: ReactNode }) {
     totalFiles: 0,
     unusedFiles: 0,
     totalSize: "0 B",
+    unusedSize: 0,
     potentialSavings: "0 B",
+    sharedFilesCount: 0,
   })
 
   const formatFileSize = (bytes: number): string => {
@@ -75,7 +77,9 @@ export function AppProvider({ children }: { children: ReactNode }) {
       totalFiles: allFiles.length,
       unusedFiles: unused.length,
       totalSize: formatFileSize(totalSize),
+      unusedSize: potentialSavings,
       potentialSavings: formatFileSize(potentialSavings),
+      sharedFilesCount: 0,
     })
   }, [])
 
@@ -93,7 +97,9 @@ export function AppProvider({ children }: { children: ReactNode }) {
           totalFiles: data.totalFiles,
           unusedFiles: data.unusedFiles,
           totalSize: formatFileSize(data.totalSize),
+          unusedSize: data.unusedSize,
           potentialSavings: formatFileSize(data.unusedSize),
+          sharedFilesCount: data.sharedFilesCount || 0,
         })
 
         if (data.lastScanTime) {
@@ -120,14 +126,14 @@ export function AppProvider({ children }: { children: ReactNode }) {
         const unusedData: UnusedFilesResponse = await unusedResponse.json()
         const unusedFilesList = unusedData.unusedFiles || []
 
-        //date strings to Date objects
+        //date strings to date objects
         const processedUnusedFiles = unusedFilesList.map((file) => ({
           ...file,
           lastModifiedTime: file.lastModifiedTime ? new Date(file.lastModifiedTime) : null,
           lastViewedTime: file.lastViewedTime ? new Date(file.lastViewedTime) : null,
           createdAt: new Date(file.createdAt),
           updatedAt: new Date(file.updatedAt),
-          // Add default values for new permission fields if not present
+          // adding default values for new permission fields if not present
           isOwnedByUser: file.isOwnedByUser ?? false,
           canDelete: file.canDelete ?? false,
           canTrash: file.canTrash ?? false,
@@ -185,7 +191,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
           lastViewedTime: file.lastViewedTime ? new Date(file.lastViewedTime) : null,
           createdAt: new Date(file.createdAt),
           updatedAt: new Date(file.updatedAt),
-          // Add default values for new permission fields if not present
+          // adding default values for new permission fields if not present
           isOwnedByUser: file.isOwnedByUser ?? false,
           canDelete: file.canDelete ?? false,
           canTrash: file.canTrash ?? false,
@@ -387,7 +393,9 @@ export function AppProvider({ children }: { children: ReactNode }) {
         totalFiles: 0,
         unusedFiles: 0,
         totalSize: "0 B",
+        unusedSize: 0,
         potentialSavings: "0 B",
+        sharedFilesCount: 0,
       })
     }
   }, [isAuthenticated, user?.email, hasData])
