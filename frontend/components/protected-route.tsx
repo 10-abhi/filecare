@@ -2,24 +2,37 @@
 
 import type React from "react"
 import { useAuth } from "@/context/auth-context"
-import { useRouter } from "next/navigation"
+import { useRouter, usePathname } from "next/navigation"
 import { useEffect } from "react"
 import { Loader2 } from "lucide-react"
 
 interface ProtectedRouteProps {
   children: React.ReactNode
   redirectTo?: string
+  allowUnauthenticated?: boolean
 }
 
-export function ProtectedRoute({ children, redirectTo = "/" }: ProtectedRouteProps) {
+export function ProtectedRoute({ 
+  children, 
+  redirectTo = "/", 
+  allowUnauthenticated = false 
+}: ProtectedRouteProps) {
   const { isAuthenticated, isLoading } = useAuth()
   const router = useRouter()
+  const pathname = usePathname()
 
   useEffect(() => {
-    if (!isLoading && !isAuthenticated) {
-      router.push(redirectTo)
+    if (!isLoading) {
+      // If user is not authenticated and this route doesn't allow unauthenticated access
+      if (!isAuthenticated && !allowUnauthenticated) {
+        router.push(redirectTo)
+      }
+      // If user is authenticated and trying to access home page, redirect to dashboard
+      else if (isAuthenticated && pathname === "/" && !allowUnauthenticated) {
+        router.push("/dashboard")
+      }
     }
-  }, [isAuthenticated, isLoading, router, redirectTo])
+  }, [isAuthenticated, isLoading, router, redirectTo, allowUnauthenticated, pathname])
 
   if (isLoading) {
     return (
@@ -32,6 +45,12 @@ export function ProtectedRoute({ children, redirectTo = "/" }: ProtectedRoutePro
     )
   }
 
+  // For routes that allow unauthenticated access, always show content
+  if (allowUnauthenticated) {
+    return <>{children}</>
+  }
+
+  // For protected routes, only show if authenticated
   if (!isAuthenticated) {
     return null
   }
