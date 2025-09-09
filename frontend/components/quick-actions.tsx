@@ -10,9 +10,7 @@ import {
   UserX, 
   Share2, 
   HardDrive, 
-  FileText, 
   Loader2,
-  AlertTriangle,
   ArrowRight
 } from 'lucide-react';
 
