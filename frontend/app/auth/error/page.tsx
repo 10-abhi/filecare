@@ -1,13 +1,13 @@
 "use client"
 
-import { useEffect } from "react"
+import { useEffect, Suspense } from "react"
 import { useSearchParams, useRouter } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
 import { AlertCircle, Home } from "lucide-react"
 import { toast } from "sonner"
 
-export default function AuthError() {
+function AuthErrorContent() {
   const searchParams = useSearchParams()
   const router = useRouter()
   const errorMessage = searchParams.get("message") || "Authentication failed"
@@ -67,5 +67,24 @@ export default function AuthError() {
         </CardContent>
       </Card>
     </div>
+  )
+}
+
+export default function AuthError() {
+  return (
+    <Suspense fallback={
+      <div className="min-h-screen bg-gradient-to-br from-gray-900 via-black to-gray-900 flex items-center justify-center p-4">
+        <Card className="w-full max-w-md bg-gray-900 border-gray-800 shadow-2xl">
+          <CardContent className="p-8 text-center">
+            <div className="w-16 h-16 mx-auto bg-gray-600 rounded-full flex items-center justify-center animate-pulse">
+              <AlertCircle className="w-8 h-8 text-white" />
+            </div>
+            <h1 className="text-2xl font-bold text-white mt-4">Loading...</h1>
+          </CardContent>
+        </Card>
+      </div>
+    }>
+      <AuthErrorContent />
+    </Suspense>
   )
 }

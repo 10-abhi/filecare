@@ -1,7 +1,6 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
-  // Production optimizations
   compress: true,
   poweredByHeader: false,
   
@@ -16,7 +15,6 @@ const nextConfig: NextConfig = {
   //   bundlePagesExternals: true,
   // },
   
-  // Environment variables validation
   env: {
     NEXT_PUBLIC_API_URL: process.env.NEXT_PUBLIC_API_URL,
   },

@@ -548,7 +548,7 @@ export default function Dashboard() {
                           <div>
                             <p className="text-xs sm:text-sm lg:text-base mb-2">No files found in your drive.</p>
                             <p className="text-xs text-gray-500 mb-4">
-                              Click "Scan Drive" to analyze your Google Drive and find files to clean up.
+                              Click &quot;Scan Drive&quot; to analyze your Google Drive and find files to clean up.
                             </p>
                           </div>
                           <Button

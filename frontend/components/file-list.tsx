@@ -356,7 +356,7 @@ export function FileList({ files, selectedFiles, onSelectionChange, loading, get
                       <div className="flex items-center gap-2">
                         <AlertTriangle className="w-4 h-4 text-yellow-400 flex-shrink-0" />
                         <p className="text-yellow-400 text-xs">
-                          This file cannot be deleted because you don't have sufficient permissions.
+                          This file cannot be deleted because you don&apos;t have sufficient permissions.
                         </p>
                       </div>
                     </div>

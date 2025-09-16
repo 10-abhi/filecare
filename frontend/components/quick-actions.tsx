@@ -51,7 +51,7 @@ export function QuickActions() {
     try {
       const result = await deleteFiles(ownedUnusedFiles.map(f => f.fileid));
       toast.success(`Deleted ${result.deletedCount} unused files`);
-    } catch (error) {
+    } catch {
       toast.error('Failed to delete unused files');
     }
   };
@@ -73,7 +73,7 @@ export function QuickActions() {
     try {
       const result = await removeFiles(sharedFiles.map(f => f.fileid));
       toast.success(`Removed ${result.deletedCount} shared files from your view`);
-    } catch (error) {
+    } catch {
       toast.error('Failed to remove shared files');
     }
   };
@@ -83,7 +83,7 @@ export function QuickActions() {
     try {
       await loadSharedFiles();
       toast.success('Loaded shared files');
-    } catch (error) {
+    } catch {
       toast.error('Failed to load shared files');
     } finally {
       setIsLoadingShared(false);
@@ -95,7 +95,7 @@ export function QuickActions() {
     try {
       await loadLargeFiles(100 * 1024 * 1024); // 100MB
       toast.success('Loaded large files (>100MB)');
-    } catch (error) {
+    } catch {
       toast.error('Failed to load large files');
     } finally {
       setIsLoadingLarge(false);

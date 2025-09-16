@@ -262,7 +262,7 @@ export function AdvancedFileManager() {
                 </div>
               ) : (
                 <p className="text-gray-600 text-center py-8">
-                  No shared files loaded. Click "Load Shared Files" to fetch files shared with you.
+                  No shared files loaded. Click &quot;Load Shared Files&quot; to fetch files shared with you.
                 </p>
               )}
             </div>
@@ -301,7 +301,7 @@ export function AdvancedFileManager() {
                 </div>
               ) : (
                 <p className="text-gray-600 text-center py-8">
-                  No large files loaded. Click "Load Large Files" to fetch files over {minSize}MB.
+                  No large files loaded. Click &quot;Load Large Files&quot; to fetch files over {minSize}MB.
                 </p>
               )}
             </div>

@@ -149,7 +149,7 @@ export function AuthModal({ isOpen, onClose, onSuccess }: AuthModalProps) {
             // Check authentication status
             await checkAuthStatus()
           }
-        } catch (e) {
+        } catch {
           // cross-origin error is expected when popup is on different domain
           // this is normal during the OAuth flow
         }

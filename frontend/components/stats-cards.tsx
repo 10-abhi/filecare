@@ -1,7 +1,7 @@
 "use client"
 
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { HardDrive, Trash2, TrendingUp, Share2, Users, FileText, AlertTriangle } from "lucide-react"
+import { HardDrive, TrendingUp, Share2, AlertTriangle } from "lucide-react"
 import type { Stats } from "@/types"
 
 interface StatsCardsProps {
